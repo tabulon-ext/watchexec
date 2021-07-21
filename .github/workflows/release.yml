@@ -86,8 +86,10 @@ jobs:
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('Cargo.lock') }}
 
       - name: Install cargo-deb
+        if: startsWith(matrix.name, 'linux-')
         run: cargo install cargo-deb --version 1.30.0
       - name: Install cargo-generate-rpm
+        if: startsWith(matrix.name, 'linux-')
         run: cargo install cargo-generate-rpm --version 0.4.0
 
       - uses: actions-rs/toolchain@v1
@@ -125,12 +127,17 @@ jobs:
           ext=""
           [[ "${{ matrix.name }}" == windows-* ]] && ext=".exe"
           bin="target/${{ matrix.target }}/release/watchexec${ext}"
+          strip "$bin" || true
+
           version=$(cat VERSION)
           dst="watchexec-${version}-${{ matrix.target }}"
           mkdir "$dst"
-          strip "$bin" || true
+
+          mkdir -p "target/release"
+          cp "$bin" "target/release/" # workaround for cargo-deb silliness with targets
+
           cp "$bin" "$dst/"
-          cp cli/README.md LICENSE completions doc/{logo.svg,watchexec.1{,.html}} "$dst/"
+          cp -r cli/README.md LICENSE completions doc/{logo.svg,watchexec.1{,.html}} "$dst/"
 
       - name: Archive (tar)
         if: '! startsWith(matrix.name, ''windows-'')'
